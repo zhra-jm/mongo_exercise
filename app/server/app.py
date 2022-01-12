@@ -1,49 +1,44 @@
-from datetime import datetime
-
-from bson.objectid import ObjectId
 from fastapi import FastAPI, HTTPException
 
 from .models import StudentSchema, CourseSchema, ClassSchema
-from .database import students_collection, course_collection, class_collection
+from .database import MongoStorage
 
 app = FastAPI()
+
+mongo = MongoStorage()
 
 
 @app.post('/create_student')
 def create_student_table(student: StudentSchema):
     try:
-        students_collection.insert_many(map(dict, student.students))
+        mongo.store_many(map(dict, student.students), 'students')
     except:
-        HTTPException(status_code=404, detail='cant create student table')
+        raise HTTPException(status_code=404, detail="cant create student table")
 
 
 @app.post('/create_courses')
 def create_courses(course: CourseSchema):
-    try:
-        course_collection.insert_many(map(dict, course.courses))
-    except:
-        HTTPException(status_code=404, detail='cant create course table')
+    mongo.store_many(map(dict, course.courses), 'courses')
 
 
 @app.post('/create_class')
 def create_class(cls: ClassSchema):
-    class_collection.insert_one(cls.dict())
+    mongo.store_one(cls.dict(), 'classes')
 
 
 @app.put('/set_end_date')
 def set_end_time(obj_id: str):
-    query = {"_id": ObjectId(obj_id)}
-    update = {"$set": {"end_date": datetime.now()}}
-    class_collection.update_one(query, update)
+    mongo.update(obj_id)
 
 
 @app.get('/show_class')
 def show_class():
-    for cls in class_collection.find():
+    class_collection = mongo.load('classes')
+    for cls in class_collection:
         duration = cls['end_date'] - cls['start_date']
         return f'{cls["user"]["name"]}, {cls["course"]["course"]}, {duration.seconds}'
 
 
 @app.delete('/delete_student')
-def delete_obj(obj_id: str):
-    students_collection.delete_one({'_id': ObjectId(obj_id)})
+def delete_student(obj_id: str):
+    mongo.delete(obj_id)
