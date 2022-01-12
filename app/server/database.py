@@ -17,8 +17,12 @@ class MongoSingleton:
         self.client = MongoClient()
         self.db = self.client['academy_denormalized']
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.client.close()
+
 
 class MongoStorage:
+
     def __init__(self):
         self.mongo = MongoSingleton()
 
